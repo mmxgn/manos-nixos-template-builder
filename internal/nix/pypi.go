@@ -15,24 +15,24 @@ import (
 
 // PyPIPackageInfo holds resolved metadata for a single PyPI package.
 type PyPIPackageInfo struct {
-	Name        string // package name as typed by the user
-	Version     string // latest version resolved from PyPI (empty if lookup failed)
-	HashExpr    string // Nix expression: quoted "sha256-..." or bare pkgs.lib.fakeHash
-	BuildSystem string // Nix attr for build-system, e.g. "setuptools", "hatchling"
-	Resolved    bool   // true when version + hash were fetched successfully
+	Name      string   // package name as typed by the user
+	Version   string   // latest version resolved from PyPI (empty if lookup failed)
+	HashExpr  string   // Nix expression: quoted "sha256-..." or bare pkgs.lib.fakeHash
+	BuildDeps []string // nixpkgs attrs for build-system, e.g. ["hatchling", "hatch-vcs"]
+	Resolved  bool     // true when version + hash were fetched successfully
 }
 
-// ResolvePyPIPackage fetches the latest version, SHA-256 hash, and build backend
-// for a package from the PyPI JSON API. On any failure it returns a stub with
-// pkgs.lib.fakeHash and setuptools so the generated flake is still valid Nix.
+// ResolvePyPIPackage fetches the latest version, SHA-256 hash, and build
+// dependencies for a package from the PyPI JSON API. On any failure it returns
+// a stub with pkgs.lib.fakeHash and setuptools.
 func ResolvePyPIPackage(name string) PyPIPackageInfo {
 	info, err := fetchPyPIInfo(name)
 	if err != nil {
 		return PyPIPackageInfo{
-			Name:        name,
-			HashExpr:    "pkgs.lib.fakeHash",
-			BuildSystem: "setuptools",
-			Resolved:    false,
+			Name:      name,
+			HashExpr:  "pkgs.lib.fakeHash",
+			BuildDeps: []string{"setuptools"},
+			Resolved:  false,
 		}
 	}
 	return info
@@ -67,7 +67,6 @@ func fetchPyPIInfo(name string) (PyPIPackageInfo, error) {
 		return PyPIPackageInfo{}, fmt.Errorf("json: %w", err)
 	}
 
-	// Find the source distribution (sdist).
 	for _, u := range payload.URLs {
 		if u.PackageType != "sdist" {
 			continue
@@ -78,42 +77,40 @@ func fetchPyPIInfo(name string) (PyPIPackageInfo, error) {
 			return PyPIPackageInfo{}, err
 		}
 
-		// Detect the build backend from pyproject.toml inside the sdist.
-		buildSystem := detectBuildSystem(u.URL)
+		buildDeps := detectBuildDeps(u.URL)
 
 		return PyPIPackageInfo{
-			Name:        payload.Info.Name,
-			Version:     payload.Info.Version,
-			HashExpr:    fmt.Sprintf(`"sha256-%s"`, sri),
-			BuildSystem: buildSystem,
-			Resolved:    true,
+			Name:      payload.Info.Name,
+			Version:   payload.Info.Version,
+			HashExpr:  fmt.Sprintf(`"sha256-%s"`, sri),
+			BuildDeps: buildDeps,
+			Resolved:  true,
 		}, nil
 	}
 
 	return PyPIPackageInfo{}, fmt.Errorf("no sdist found for %q", name)
 }
 
-// detectBuildSystem downloads the sdist, extracts pyproject.toml, and returns
-// the corresponding nixpkgs Python package attr for the build backend.
-// Falls back to "setuptools" on any error.
-func detectBuildSystem(sdistURL string) string {
-	backend, err := fetchBuildBackend(sdistURL)
-	if err != nil {
-		return "setuptools"
+// detectBuildDeps downloads the sdist, reads pyproject.toml, and returns the
+// list of nixpkgs Python package attrs needed for build-system.
+func detectBuildDeps(sdistURL string) []string {
+	deps, err := fetchBuildDeps(sdistURL)
+	if err != nil || len(deps) == 0 {
+		return []string{"setuptools"}
 	}
-	return backendToNixAttr(backend)
+	return deps
 }
 
-func fetchBuildBackend(sdistURL string) (string, error) {
+func fetchBuildDeps(sdistURL string) ([]string, error) {
 	resp, err := http.Get(sdistURL) //nolint:noctx
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	defer resp.Body.Close()
 
 	gr, err := gzip.NewReader(resp.Body)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	defer gr.Close()
 
@@ -124,48 +121,73 @@ func fetchBuildBackend(sdistURL string) (string, error) {
 			break
 		}
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 		if strings.HasSuffix(hdr.Name, "/pyproject.toml") || hdr.Name == "pyproject.toml" {
 			content, err := io.ReadAll(tr)
 			if err != nil {
-				return "", err
+				return nil, err
 			}
-			return parseBuildBackend(string(content)), nil
+			return parseBuildDeps(string(content)), nil
 		}
 	}
-	return "", fmt.Errorf("pyproject.toml not found in sdist")
+	return nil, fmt.Errorf("pyproject.toml not found in sdist")
 }
 
-var buildBackendRe = regexp.MustCompile(`build-backend\s*=\s*['"]([^'"]+)['"]`)
+// buildSystemRe captures the content of the requires = [...] array inside
+// the [build-system] section. Handles multi-line arrays.
+var buildSystemRe = regexp.MustCompile(`(?s)\[build-system\][^\[]*requires\s*=\s*\[([^\]]+)\]`)
 
-func parseBuildBackend(toml string) string {
-	m := buildBackendRe.FindStringSubmatch(toml)
-	if len(m) >= 2 {
-		return m[1]
+// quotedPkgRe extracts quoted strings (package specifiers) from the requires list.
+var quotedPkgRe = regexp.MustCompile(`['"]([^'"]+)['"]`)
+
+// pkgNameRe strips version specifiers like >=1.0, ~=2, etc.
+var pkgNameRe = regexp.MustCompile(`^([A-Za-z0-9_.-]+)`)
+
+func parseBuildDeps(toml string) []string {
+	m := buildSystemRe.FindStringSubmatch(toml)
+	if len(m) < 2 {
+		return []string{"setuptools"}
 	}
-	return ""
+
+	var deps []string
+	for _, match := range quotedPkgRe.FindAllStringSubmatch(m[1], -1) {
+		specifier := match[1]
+		nm := pkgNameRe.FindString(specifier)
+		if nm == "" {
+			continue
+		}
+		nixAttr := pypiNameToNixAttr(nm)
+		deps = append(deps, nixAttr)
+	}
+	if len(deps) == 0 {
+		return []string{"setuptools"}
+	}
+	return deps
 }
 
-// backendToNixAttr maps a PEP 517 build-backend string to its nixpkgs
-// Python package attribute name.
-func backendToNixAttr(backend string) string {
-	switch {
-	case strings.Contains(backend, "hatchling"):
-		return "hatchling"
-	case strings.Contains(backend, "flit_core"), strings.Contains(backend, "flit-core"):
-		return "flit-core"
-	case strings.Contains(backend, "poetry"):
-		return "poetry-core"
-	case strings.Contains(backend, "maturin"):
-		return "maturin"
-	case strings.Contains(backend, "pdm"):
-		return "pdm-backend"
-	case strings.Contains(backend, "scikit_build"), strings.Contains(backend, "scikit-build"):
-		return "scikit-build-core"
-	default:
-		return "setuptools"
+// pypiNameToNixAttr converts a PyPI package name to its nixpkgs Python attr.
+// Most names match after lowercasing and replacing underscores with hyphens.
+func pypiNameToNixAttr(name string) string {
+	normalized := strings.ToLower(strings.ReplaceAll(name, "_", "-"))
+	overrides := map[string]string{
+		"scikit-build-core": "scikit-build-core",
+		"setuptools-scm":    "setuptools-scm",
+		"setuptools":        "setuptools",
+		"hatchling":         "hatchling",
+		"hatch-vcs":         "hatch-vcs",
+		"flit-core":         "flit-core",
+		"poetry-core":       "poetry-core",
+		"maturin":           "maturin",
+		"pdm-backend":       "pdm-backend",
+		"wheel":             "wheel",
+		"cython":            "cython",
+		"ninja":             "ninja",
 	}
+	if attr, ok := overrides[normalized]; ok {
+		return attr
+	}
+	return normalized
 }
 
 // hexSHA256ToSRI converts a hex-encoded SHA-256 digest to the base64 portion
