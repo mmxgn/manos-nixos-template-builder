@@ -33,7 +33,7 @@
               inherit pname version;
               hash = {{ .HashExpr }};{{ if not .Resolved }} # run 'nix develop' → paste hash from the error{{ end }}
             };
-            build-system = [ ps.setuptools ];
+            build-system = [ ps.{{ .BuildSystem }} ];
             doCheck = false;
           })
           {{- end }}
