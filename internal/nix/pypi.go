@@ -15,11 +15,12 @@ import (
 
 // PyPIPackageInfo holds resolved metadata for a single PyPI package.
 type PyPIPackageInfo struct {
-	Name      string   // package name as typed by the user
-	Version   string   // latest version resolved from PyPI (empty if lookup failed)
-	HashExpr  string   // Nix expression: quoted "sha256-..." or bare pkgs.lib.fakeHash
-	BuildDeps []string // nixpkgs attrs for build-system, e.g. ["hatchling", "hatch-vcs"]
-	Resolved  bool     // true when version + hash were fetched successfully
+	Name        string   // package name as typed by the user
+	Version     string   // latest version resolved from PyPI (empty if lookup failed)
+	HashExpr    string   // Nix expression: quoted "sha256-..." or bare pkgs.lib.fakeHash
+	BuildDeps   []string // nixpkgs attrs for build-system, e.g. ["hatchling", "hatch-vcs"]
+	RuntimeDeps []string // nixpkgs attrs for propagatedBuildInputs (from requires_dist)
+	Resolved    bool     // true when version + hash were fetched successfully
 }
 
 // ResolvePyPIPackage fetches the latest version, SHA-256 hash, and build
@@ -52,8 +53,9 @@ func fetchPyPIInfo(name string) (PyPIPackageInfo, error) {
 
 	var payload struct {
 		Info struct {
-			Name    string `json:"name"`
-			Version string `json:"version"`
+			Name         string   `json:"name"`
+			Version      string   `json:"version"`
+			RequiresDist []string `json:"requires_dist"`
 		} `json:"info"`
 		URLs []struct {
 			PackageType string `json:"packagetype"`
@@ -78,13 +80,15 @@ func fetchPyPIInfo(name string) (PyPIPackageInfo, error) {
 		}
 
 		buildDeps := detectBuildDeps(u.URL)
+		runtimeDeps := parseRuntimeDeps(payload.Info.RequiresDist)
 
 		return PyPIPackageInfo{
-			Name:      payload.Info.Name,
-			Version:   payload.Info.Version,
-			HashExpr:  fmt.Sprintf(`"sha256-%s"`, sri),
-			BuildDeps: buildDeps,
-			Resolved:  true,
+			Name:        payload.Info.Name,
+			Version:     payload.Info.Version,
+			HashExpr:    fmt.Sprintf(`"sha256-%s"`, sri),
+			BuildDeps:   buildDeps,
+			RuntimeDeps: runtimeDeps,
+			Resolved:    true,
 		}, nil
 	}
 
@@ -162,6 +166,29 @@ func parseBuildDeps(toml string) []string {
 	}
 	if len(deps) == 0 {
 		return []string{"setuptools"}
+	}
+	return deps
+}
+
+// pkgSpecRe extracts the bare package name from a PEP 508 dependency specifier,
+// e.g. "httpx>=0.27" → "httpx", "pydantic[email]>=2" → "pydantic".
+var pkgSpecNameRe = regexp.MustCompile(`^([A-Za-z0-9_.-]+)`)
+
+// parseRuntimeDeps converts a requires_dist list (PEP 508 specifiers) to a
+// list of nixpkgs Python package attrs. Entries with environment markers
+// ("; sys_platform ==…" etc.) are skipped — they are optional/platform-specific.
+func parseRuntimeDeps(requiresDist []string) []string {
+	var deps []string
+	for _, spec := range requiresDist {
+		// Skip conditional/optional dependencies entirely.
+		if strings.Contains(spec, ";") {
+			continue
+		}
+		name := pkgSpecNameRe.FindString(spec)
+		if name == "" {
+			continue
+		}
+		deps = append(deps, pypiNameToNixAttr(name))
 	}
 	return deps
 }

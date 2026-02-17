@@ -34,6 +34,9 @@
               hash = {{ .HashExpr }};{{ if not .Resolved }} # run 'nix develop' → paste hash from the error{{ end }}
             };
             build-system = with ps; [{{ range .BuildDeps }} {{ . }}{{ end }} ];
+            {{- if .RuntimeDeps }}
+            propagatedBuildInputs = with ps; [{{ range .RuntimeDeps }} {{ . }}{{ end }} ];
+            {{- end }}
             doCheck = false;
           })
           {{- end }}
