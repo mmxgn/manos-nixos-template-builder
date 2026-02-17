@@ -137,7 +137,7 @@ func fetchBuildBackend(sdistURL string) (string, error) {
 	return "", fmt.Errorf("pyproject.toml not found in sdist")
 }
 
-var buildBackendRe = regexp.MustCompile(`build-backend\s*=\s*"([^"]+)"`)
+var buildBackendRe = regexp.MustCompile(`build-backend\s*=\s*['"]([^'"]+)['"]`)
 
 func parseBuildBackend(toml string) string {
 	m := buildBackendRe.FindStringSubmatch(toml)
