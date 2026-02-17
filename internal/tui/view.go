@@ -578,8 +578,8 @@ func (m Model) viewCompletion() string {
 		if m.AskingGitAdd {
 			s.WriteString(InfoStyle.Render("flake.nix is not tracked by Git."))
 			s.WriteString("\n")
-			s.WriteString("Nix requires files to be tracked before evaluating a flake.\n\n")
-			s.WriteString(HelpStyle.Render("y: run 'nix develop path:.' anyway | n/esc: cancel"))
+			s.WriteString("Running 'git add flake.nix' first avoids Nix copying the whole folder.\n\n")
+			s.WriteString(HelpStyle.Render("y: git add then nix develop | n: nix develop path:. (copies folder) | esc: cancel"))
 		} else {
 			s.WriteString("Would you like to enter the development environment?\n\n")
 			s.WriteString(HelpStyle.Render("y: run 'nix develop path:.' | e: edit flake.nix | n/q: quit"))

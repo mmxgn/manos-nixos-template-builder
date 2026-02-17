@@ -846,10 +846,22 @@ func (m Model) updateCompletion(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if m.Err == nil {
 		switch msg := msg.(type) {
 		case tea.KeyMsg:
-			// Sub-prompt: flake.nix is untracked, confirm running without git-add
+			// Sub-prompt: flake.nix is untracked — offer to git add first
 			if m.AskingGitAdd {
 				switch msg.String() {
 				case "y":
+					// git add flake.nix then nix develop (no path:, uses git tree)
+					m.AskingGitAdd = false
+					dir := m.flakeDir()
+					abs, _ := filepath.Abs(m.Config.OutputPath)
+					cmd := exec.Command("sh", "-c",
+						"git -C "+dir+" add "+abs+" && nix develop")
+					cmd.Dir = dir
+					return m, tea.ExecProcess(cmd, func(err error) tea.Msg {
+						return tea.Quit()
+					})
+				case "n":
+					// Skip git add — fall back to path: (copies whole folder)
 					m.AskingGitAdd = false
 					dir := m.flakeDir()
 					cmd := exec.Command("nix", "develop", "path:"+dir)
@@ -857,7 +869,7 @@ func (m Model) updateCompletion(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return m, tea.ExecProcess(cmd, func(err error) tea.Msg {
 						return tea.Quit()
 					})
-				case "n", "q", "esc":
+				case "q", "esc":
 					m.AskingGitAdd = false
 					return m, nil
 				}
@@ -870,8 +882,9 @@ func (m Model) updateCompletion(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.AskingGitAdd = true
 					return m, nil
 				}
+				// Flake is tracked — plain nix develop uses the git tree (no folder copy)
 				dir := m.flakeDir()
-				cmd := exec.Command("nix", "develop", "path:"+dir)
+				cmd := exec.Command("nix", "develop")
 				cmd.Dir = dir
 				return m, tea.ExecProcess(cmd, func(err error) tea.Msg {
 					return tea.Quit()

@@ -103,7 +103,6 @@ var LanguageDefinitions = map[string]models.Language{
 		},
 		CommonPackages: []models.Package{
 			// Package Managers
-			{Name: "uv", NixAttr: "uv", Description: "Fast Python package manager", Category: "Package Managers"},
 			{Name: "pip", NixAttr: "pip", Description: "Python package installer", Category: "Package Managers"},
 			// Code Quality
 			{Name: "pytest", NixAttr: "pytest", Description: "Testing framework", Category: "Code Quality"},
@@ -161,6 +160,8 @@ var CommonTools = []models.Package{
 	// Version Control
 	{Name: "git", NixAttr: "git", Description: "Version control", Category: "Version Control"},
 	{Name: "git-lfs", NixAttr: "git-lfs", Description: "Git extension for large file storage", Category: "Version Control"},
+	// Package Managers
+	{Name: "uv", NixAttr: "uv", Description: "Fast Python package manager", Category: "Package Managers"},
 	// Network
 	{Name: "curl", NixAttr: "curl", Description: "HTTP client", Category: "Network"},
 	// Data Processing

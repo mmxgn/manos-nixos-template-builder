@@ -41,14 +41,15 @@ func GenerateFlake(config models.UserConfig) (string, error) {
 	}
 
 	// Combine: version, packages, tools, feature attrs
-	allPackages := []string{config.LanguageVersion}
+	// zlib is always included for Python — many C extensions link against libz.so
+	allPackages := []string{config.LanguageVersion, "zlib"}
 	allPackages = append(allPackages, versionedPackages...)
 	allPackages = append(allPackages, config.Tools...)
 	allPackages = append(allPackages, config.EnabledFeatures...)
 
 	// Add pip if there are PyPI packages
 	if len(config.PyPIPackages) > 0 {
-		allPackages = append(allPackages, "pip")
+		allPackages = append(allPackages, GetVersionedPackageAttr(config.LanguageVersion, "pip"))
 	}
 
 	// Create template with custom functions (using embedded template)
