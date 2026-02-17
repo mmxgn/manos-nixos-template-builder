@@ -4,8 +4,8 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/mmxgn/nix-template-chooser/internal/models"
-	"github.com/mmxgn/nix-template-chooser/internal/nix"
+	"github.com/mmxgn/manos-nix-template-builder/internal/models"
+	"github.com/mmxgn/manos-nix-template-builder/internal/nix"
 )
 
 // Screen represents the current screen in the TUI

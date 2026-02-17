@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/mmxgn/nix-template-chooser/internal/models"
+	"github.com/mmxgn/manos-nix-template-builder/internal/models"
 )
 
 // NixpkgsChannels lists the available nixpkgs channels with their Python version support.

@@ -9,13 +9,13 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/mmxgn/nix-template-chooser/internal/tui"
+	"github.com/mmxgn/manos-nix-template-builder/internal/tui"
 )
 
 func main() {
 	outputFlag := flag.String("o", "", "output path for flake.nix")
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: nix-template-chooser [OPTIONS] [PATH]\n\n")
+		fmt.Fprintf(os.Stderr, "Usage: manos-nix-template-builder [OPTIONS] [PATH]\n\n")
 		fmt.Fprintf(os.Stderr, "Arguments:\n")
 		fmt.Fprintf(os.Stderr, "  PATH    Where to write flake.nix (default: ./flake.nix)\n")
 		fmt.Fprintf(os.Stderr, "          If the parent directory does not exist you will be asked to create it.\n\n")

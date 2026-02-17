@@ -1,11 +1,9 @@
-# nix-template-chooser
+# manos-nix-template-builder
+
+> [!WARNING]
+> **Use at your own risk.** This tool has not been thoroughly tested and may overwrite or corrupt files. It generates Nix flake files but makes no guarantees about correctness or fitness for any particular purpose. If something breaks (or it eats your files), please [submit an issue](https://github.com/mmxgn/manos-nixos-template-builder/issues) — it helps a lot.
 
 An interactive TUI for generating `flake.nix` development environments — because nobody wants to look up flake syntax every time they start a new project.
-
-<!-- ANIMATION PLACEHOLDER -->
-<!-- Replace the block below with an animated GIF or an asciinema embed -->
-> _Demo animation coming soon_
-<!-- END ANIMATION PLACEHOLDER -->
 
 ---
 
@@ -21,9 +19,9 @@ nix run github:mmxgn/manos-nixos-template-builder -- ~/projects/myapp/flake.nix
 **Install permanently:**
 ```bash
 nix profile install github:mmxgn/manos-nixos-template-builder
-nix-template-chooser                          # writes ./flake.nix
-nix-template-chooser ~/projects/myapp/flake.nix
-nix-template-chooser -o ~/projects/myapp/flake.nix
+manos-nix-template-builder                          # writes ./flake.nix
+manos-nix-template-builder ~/projects/myapp/flake.nix
+manos-nix-template-builder -o ~/projects/myapp/flake.nix
 ```
 
 Navigate with arrow keys, `Space` to toggle, `Enter` to confirm, `Esc` to go back, `q` to quit.
@@ -99,15 +97,15 @@ Add the flake as an input and include the package in `environment.systemPackages
 {
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    nix-template-chooser.url = "github:mmxgn/manos-nixos-template-builder";
+    manos-nix-template-builder.url = "github:mmxgn/manos-nixos-template-builder";
   };
 
-  outputs = { nixpkgs, nix-template-chooser, ... }: {
+  outputs = { nixpkgs, manos-nix-template-builder, ... }: {
     nixosConfigurations.my-host = nixpkgs.lib.nixosSystem {
       modules = [
         ({ pkgs, system, ... }: {
           environment.systemPackages = [
-            nix-template-chooser.packages.${system}.default
+            manos-nix-template-builder.packages.${system}.default
           ];
         })
       ];
@@ -129,16 +127,16 @@ Add the flake as an input and install via `home.packages`:
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     home-manager.url = "github:nix-community/home-manager";
-    nix-template-chooser.url = "github:mmxgn/manos-nixos-template-builder";
+    manos-nix-template-builder.url = "github:mmxgn/manos-nixos-template-builder";
   };
 
-  outputs = { nixpkgs, home-manager, nix-template-chooser, ... }: {
+  outputs = { nixpkgs, home-manager, manos-nix-template-builder, ... }: {
     homeConfigurations.my-user = home-manager.lib.homeManagerConfiguration {
       pkgs = nixpkgs.legacyPackages.x86_64-linux; # adjust for your system
       modules = [
         ({ pkgs, ... }: {
           home.packages = [
-            nix-template-chooser.packages.${pkgs.system}.default
+            manos-nix-template-builder.packages.${pkgs.system}.default
           ];
         })
       ];

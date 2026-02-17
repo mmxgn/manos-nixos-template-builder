@@ -19,7 +19,7 @@ An interactive TUI tool to help you create Nix flake.nix files easily, without h
 ```bash
 # Build and run
 nix build
-./result/bin/nix-template-chooser
+./result/bin/manos-nix-template-builder
 
 # Or run directly
 nix run .#default
@@ -28,7 +28,7 @@ nix run .#default
 ### Run from GitHub (after pushing)
 
 ```bash
-nix flake run github:mmxgn/nix-template-chooser#nix-template-chooser
+nix run github:mmxgn/manos-nixos-template-builder
 ```
 
 ## Workflow
@@ -123,7 +123,7 @@ nix develop
 go run main.go
 
 # Build
-go build -o nix-template-chooser
+go build -o manos-nix-template-builder  # binary name in local dev
 
 # Rebuild Nix package
 nix build

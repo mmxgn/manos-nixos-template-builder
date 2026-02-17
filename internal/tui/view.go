@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/mmxgn/nix-template-chooser/internal/models"
-	"github.com/mmxgn/nix-template-chooser/internal/nix"
+	"github.com/mmxgn/manos-nix-template-builder/internal/models"
+	"github.com/mmxgn/manos-nix-template-builder/internal/nix"
 )
 
 // View renders the current screen

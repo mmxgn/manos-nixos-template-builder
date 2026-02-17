@@ -9,7 +9,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/mmxgn/nix-template-chooser/internal/models"
+	"github.com/mmxgn/manos-nix-template-builder/internal/models"
 )
 
 //go:embed templates/flake_template.nix.tmpl

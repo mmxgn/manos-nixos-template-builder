@@ -1,4 +1,4 @@
-module github.com/mmxgn/nix-template-chooser
+module github.com/mmxgn/manos-nix-template-builder
 
 go 1.25.5
 

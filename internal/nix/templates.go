@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os/exec"
 
-	"github.com/mmxgn/nix-template-chooser/internal/models"
+	"github.com/mmxgn/manos-nix-template-builder/internal/models"
 )
 
 // FlakeShowOutput represents the JSON output of `nix flake show --json`

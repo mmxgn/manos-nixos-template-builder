@@ -13,7 +13,7 @@
       in
       {
         packages.default = pkgs.buildGoModule {
-          pname = "nix-template-chooser";
+          pname = "manos-nix-template-builder";
           version = "0.1.0";
           src = ./.;
 
@@ -28,7 +28,7 @@
 
         apps.default = {
           type = "app";
-          program = "${self.packages.${system}.default}/bin/nix-template-chooser";
+          program = "${self.packages.${system}.default}/bin/manos-nix-template-builder";
         };
 
         devShells.default = pkgs.mkShell {
