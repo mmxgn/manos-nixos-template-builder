@@ -11,41 +11,59 @@
       let
         pkgs = import nixpkgs {
           inherit system;
-          config.allowUnfree = true;  # Allow unfree packages (CUDA, etc.)
+          config.allowUnfree = true;  # Required for CUDA and other unfree packages
         };
+
+        pythonEnv = pkgs.{{ .PythonVersion }}.withPackages (ps: with ps; [
+          {{- range .PythonPackages }}
+          {{ . }}
+          {{- end }}
+          {{- range .PyPIPackages }}
+
+          # PyPI: {{ .Name }}{{ if .Resolved }} {{ .Version }}{{ end }}
+          (ps.buildPythonPackage rec {
+            pname = "{{ .Name }}";
+            {{- if .Resolved }}
+            version = "{{ .Version }}";
+            {{- else }}
+            version = ""; # TODO: set version, e.g. "1.0.0"
+            {{- end }}
+            src = ps.fetchPypi {
+              inherit pname version;
+              hash = {{ .HashExpr }};{{ if not .Resolved }} # run 'nix develop' → paste hash from the error{{ end }}
+            };
+            doCheck = false;
+          })
+          {{- end }}
+        ]);
       in
       {
         {{- if .UseFHS }}
         devShells.default = (pkgs.buildFHSEnv {
           name = "dev-env";
-          targetPkgs = pkgs: with pkgs; [
-            {{- range .Packages }}
-            {{ . }}
+          targetPkgs = pkgs: [
+            pythonEnv
+            {{- range .SystemPackages }}
+            pkgs.{{ . }}
             {{- end }}
           ];
 
           profile = ''
             echo "Development environment loaded."
-            echo "Packages: {{ join .Packages ", " }}"
             {{- if .EnvVars }}
             # Environment variables
             {{- range .EnvVars }}
             export {{ . }}=""
             {{- end }}
             {{- end }}
-            {{- if .HasPyPI }}
-            echo ""
-            echo "Installing PyPI packages..."
-            pip install --quiet {{ join .PyPIPackages " " }}
-            echo "PyPI packages installed: {{ join .PyPIPackages ", " }}"
-            {{- end }}
           '';
         }).env;
         {{- else }}
         devShells.default = pkgs.mkShell {
-          buildInputs = with pkgs; [
-            {{- range .Packages }}
-            {{ . }}
+          buildInputs = [
+            pythonEnv
+            {{- range .SystemPackages }}
+            pkgs.{{ . }}
             {{- end }}
           ];
           {{- if .EnvVars }}
@@ -58,24 +76,15 @@
 
           shellHook = ''
             echo "Development environment loaded."
-            echo "Packages: {{ join .Packages ", " }}"
-            {{- if .HasPyPI }}
-            echo ""
-            echo "Installing PyPI packages..."
-            pip install --quiet {{ join .PyPIPackages " " }}
-            echo "PyPI packages installed: {{ join .PyPIPackages ", " }}"
-            {{- end }}
           '';
         };
         {{- end }}
 
-        # Example package definition (customize for your project)
-        # Uncomment and modify as needed:
-        # packages.default = pkgs.buildGoModule {  # or buildPythonPackage, etc.
+        # Example package build (uncomment and adapt as needed):
+        # packages.default = pkgs.{{ .PythonVersion }}.pkgs.buildPythonPackage rec {
         #   pname = "my-app";
         #   version = "0.1.0";
         #   src = ./.;
-        #   # Add build-specific configuration here
         # };
       }
     );
