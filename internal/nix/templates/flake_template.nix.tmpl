@@ -28,10 +28,12 @@
             {{- else }}
             version = ""; # TODO: set version, e.g. "1.0.0"
             {{- end }}
+            pyproject = true;
             src = ps.fetchPypi {
               inherit pname version;
               hash = {{ .HashExpr }};{{ if not .Resolved }} # run 'nix develop' → paste hash from the error{{ end }}
             };
+            build-system = [ ps.setuptools ];
             doCheck = false;
           })
           {{- end }}
