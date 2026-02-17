@@ -288,11 +288,12 @@ func (m Model) updateTemplateOrCustom(msg tea.Msg) (tea.Model, tea.Cmd) {
 							m.CurrentScreen = ScreenNixpkgsSelector
 							return m, nil
 						} else {
-							// Use preset template
+							// Use preset template — always pins to nixos-unstable
 							m.Config.TemplateName = tmpl.Name
 							m.Config.LanguageVersion = tmpl.Version
 							m.Config.Packages = tmpl.Packages
 							m.Config.Tools = tmpl.Tools
+							m.Config.NixpkgsURL = "github:NixOS/nixpkgs/nixos-unstable"
 
 							// Enable features by converting feature names to NixAttrs
 							m.Config.EnabledFeatures = make([]string, 0)

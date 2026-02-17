@@ -63,7 +63,7 @@ var LanguageDefinitions = map[string]models.Language{
 			{
 				Name:        "Data Science",
 				Description: "NumPy, Pandas, Jupyter, Matplotlib for data analysis",
-				Version:     "python311",
+				Version:     "python3",
 				Packages:    []string{"numpy", "pandas", "matplotlib", "ipython", "jupyter"},
 				Tools:       []string{"git"},
 				Features:    []string{},
@@ -71,7 +71,7 @@ var LanguageDefinitions = map[string]models.Language{
 			{
 				Name:        "Web Development",
 				Description: "Flask, Requests, pytest for web apps",
-				Version:     "python311",
+				Version:     "python3",
 				Packages:    []string{"flask", "requests", "pytest", "black"},
 				Tools:       []string{"git", "curl", "jq"},
 				Features:    []string{},
@@ -79,7 +79,7 @@ var LanguageDefinitions = map[string]models.Language{
 			{
 				Name:        "Machine Learning (CUDA)",
 				Description: "PyTorch, NumPy, Pandas with GPU acceleration",
-				Version:     "python311",
+				Version:     "python3",
 				Packages:    []string{"torch", "numpy", "pandas", "matplotlib", "transformers", "diffusers", "sentencepiece", "triton"},
 				Tools:       []string{"git"},
 				Features:    []string{"CUDA Support"},
@@ -87,7 +87,7 @@ var LanguageDefinitions = map[string]models.Language{
 			{
 				Name:        "Minimal Python",
 				Description: "Just Python with basic tools",
-				Version:     "python311",
+				Version:     "python3",
 				Packages:    []string{"pytest", "black"},
 				Tools:       []string{"git"},
 				Features:    []string{},
